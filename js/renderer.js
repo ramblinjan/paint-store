@@ -1,5 +1,5 @@
 import { TILE, COLS, ROWS, ZONE, TILE_COLORS, BASE_COLORS } from './constants.js';
-import { MAP } from './tilemap.js';
+import { MAP, INTERACT_POINTS, isWalkable } from './tilemap.js';
 
 // 2-wide shakers at cols 3, 5, 7 (shifted right 2)
 const SHAKERS = [
@@ -44,6 +44,40 @@ export function drawTiles(flashZones, shakersState, tintMachine, elapsed) {
 
   if (tintMachine && tintMachine.bangTimer > 0) {
     _drawBangOverlay(tintMachine.bangTimer);
+  }
+}
+
+// ── Hot zone highlights ───────────────────────────────────────────────────
+
+const ZONE_COLORS = {
+  [ZONE.REGISTER]:          [255, 215,  50],
+  [ZONE.PICKUP]:            [ 50, 210, 100],
+  [ZONE.SHELF_WHITE]:       [255, 200, 110],
+  [ZONE.SHELF_GRAY]:        [200, 200, 200],
+  [ZONE.SHELF_DEEP]:        [160, 160, 230],
+  [ZONE.SHAKER_A]:          [100, 170, 255],
+  [ZONE.SHAKER_B]:          [100, 170, 255],
+  [ZONE.SHAKER_C]:          [100, 170, 255],
+  [ZONE.TINT_INPUT]:        [190, 120, 255],
+  [ZONE.TINT_MACHINE_BODY]: [190, 120, 255],
+  [ZONE.TINT_OUTPUT]:       [190, 120, 255],
+};
+
+function _drawHotZones() {
+  for (const [zoneName, pt] of Object.entries(INTERACT_POINTS)) {
+    const rgb = ZONE_COLORS[zoneName];
+    if (!rgb) continue;
+    for (let col = Math.max(0, Math.floor(pt.x - 1.8)); col <= Math.min(COLS - 1, Math.ceil(pt.x + 1.8)); col++) {
+      for (let row = Math.max(0, Math.floor(pt.y - 1.8)); row <= Math.min(ROWS - 1, Math.ceil(pt.y + 1.8)); row++) {
+        if (!isWalkable(col, row)) continue;
+        if (Math.abs(col - pt.x) + Math.abs(row - pt.y) >= 1.8) continue;
+        ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.18)`;
+        ctx.fillRect(col * TILE, row * TILE, TILE, TILE);
+        ctx.strokeStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.45)`;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(col * TILE + 0.5, row * TILE + 0.5, TILE - 1, TILE - 1);
+      }
+    }
   }
 }
 
