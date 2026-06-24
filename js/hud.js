@@ -6,7 +6,8 @@ const CONTAINER = COLS * TILE; // canvas width in px
 export function updateHUD(sm, player, player2 = null) {
   el('score').textContent = sm.score;
   _updateDayBanner(sm);
-  _updateQueuePanel(sm);
+  _updateQueuePanels(sm, !!player2);
+  _updateLeftMirrors(sm, !!player2);
   _updateWorkingBlock(sm, player,  'active-task',    'P1');
   _updateWorkingBlock(sm, player2, 'active-task-p2', 'P2');
   _updateRightPanel(sm);
@@ -18,20 +19,84 @@ function _updateDayBanner(sm) {
   if (sun) sun.style.left = `calc(${progress * 100}% - 7px)`;
 }
 
-function _updateQueuePanel(sm) {
-  const list = el('queue-list');
-  list.innerHTML = '';
+function _updateQueuePanels(sm, p2Active) {
+  // Build queue HTML once, apply to both panels
+  let html = '';
   sm.queueTickets.forEach(t => {
-    const div = document.createElement('div');
-    div.className = 'queue-item';
-    div.innerHTML =
+    html +=
+      `<div class="queue-item">` +
       `<span class="qi-name">${t.order.customerName.split(' ').pop()} ×${t.order.canCount}</span>` +
-      `<span class="qi-color">${t.order.colorName}</span>`;
-    list.appendChild(div);
+      `<span class="qi-color">${t.order.colorName}</span>` +
+      `</div>`;
   });
-  if (sm.queue.length === 0) {
-    list.innerHTML = '<div class="queue-empty">No customers</div>';
+  if (!html) html = '<div class="queue-empty">No customers</div>';
+
+  el('queue-list').innerHTML = html;
+
+  // Right-side queue mirror — shown only when P2 is active
+  const qRight = el('queue-right');
+  qRight.classList.toggle('hidden', !p2Active);
+  if (p2Active) el('queue-list-right').innerHTML = html;
+}
+
+function _updateLeftMirrors(sm, p2Active) {
+  el('left-mirrors').classList.toggle('hidden', !p2Active);
+
+  // Tinter
+  if (p2Active) el('tinter-status-left').innerHTML = _tinterHTML(sm);
+
+  // Shakers
+  if (p2Active) {
+    const shakerListLeft = el('shaker-list-left');
+    shakerListLeft.innerHTML = '';
+    ['A', 'B', 'C'].forEach((lbl, i) => {
+      const shaker = sm.shakers[i];
+      const div = document.createElement('div');
+      div.className = 'shaker-row';
+      let statusText, statusClass;
+      if (shaker.status === 'idle') {
+        statusText = '—'; statusClass = 'sh-idle';
+      } else if (shaker.status === 'shaking') {
+        const ticket = sm.tickets.get(shaker.ticketId);
+        const name = ticket ? ticket.order.customerName.split(' ').pop() : '?';
+        statusText = `${name} ${Math.ceil(shaker.timer)}s`; statusClass = 'sh-shaking';
+      } else {
+        const ticket = sm.tickets.get(shaker.ticketId);
+        const name = ticket ? ticket.order.customerName.split(' ').pop() : '?';
+        statusText = `${name} READY`; statusClass = 'sh-ready';
+      }
+      div.innerHTML =
+        `<span class="sh-label">[${lbl}]</span>` +
+        `<span class="sh-status ${statusClass}">${statusText}</span>`;
+      shakerListLeft.appendChild(div);
+    });
   }
+
+  // Pickup
+  if (p2Active) {
+    const pickupListLeft = el('pickup-list-left');
+    pickupListLeft.innerHTML = '';
+    sm.pickupTickets.forEach(t => {
+      const div = document.createElement('div');
+      div.className = 'pickup-item';
+      const name = t.order.customerName.split(' ').pop();
+      div.textContent = `${name} ×${t.cansNeeded - t.cansDelivered}`;
+      pickupListLeft.appendChild(div);
+    });
+    if (sm.atPickup.length === 0) {
+      pickupListLeft.innerHTML = '<div class="queue-empty">—</div>';
+    }
+  }
+}
+
+function _tinterHTML(sm) {
+  const tm = sm.tintMachine;
+  const hasActivity = tm.inputQueue.length > 0 || tm.processing || tm.outputQueue.length > 0;
+  if (!hasActivity) return '<span class="queue-empty">—</span>';
+  const proc = tm.processing
+    ? `<span class="tint-proc">${Math.ceil(tm.processing.timer)}s</span>`
+    : `<span class="tint-idle">—</span>`;
+  return `<span class="tint-in">In:${tm.inputQueue.length}</span> → ${proc} → <span class="tint-out">Out:${tm.outputQueue.length}</span>`;
 }
 
 function _updateWorkingBlock(sm, player, elementId, label) {
@@ -68,23 +133,8 @@ function _updateWorkingBlock(sm, player, elementId, label) {
 }
 
 function _updateRightPanel(sm) {
-  // Tinter status
-  const tinterEl = el('tinter-status');
-  if (tinterEl) {
-    const tm = sm.tintMachine;
-    const hasActivity = tm.inputQueue.length > 0 || tm.processing || tm.outputQueue.length > 0;
-    if (hasActivity) {
-      const proc = tm.processing
-        ? `<span class="tint-proc">${Math.ceil(tm.processing.timer)}s</span>`
-        : `<span class="tint-idle">—</span>`;
-      tinterEl.innerHTML =
-        `<span class="tint-in">In:${tm.inputQueue.length}</span> ` +
-        `→ ${proc} → ` +
-        `<span class="tint-out">Out:${tm.outputQueue.length}</span>`;
-    } else {
-      tinterEl.innerHTML = '<span class="queue-empty">—</span>';
-    }
-  }
+  // Tinter status (main)
+  el('tinter-status').innerHTML = _tinterHTML(sm);
 
   // Shaker statuses
   const shakerList = el('shaker-list');

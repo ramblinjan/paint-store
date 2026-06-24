@@ -33,6 +33,7 @@ export class Player {
 
     this.x = Math.max(0.5, Math.min(COLS - 0.5, this.x));
     this.y = Math.max(0.5, Math.min(ROWS - 0.5, this.y));
+
   }
 
   _canMove(tx, ty) {

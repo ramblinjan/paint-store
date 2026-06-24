@@ -394,14 +394,14 @@ function _drawZoneFlash(zone, alpha) {
 
 // ── Customers ─────────────────────────────────────────────────────────────
 
-export function drawCustomers(customers) {
+export function drawCustomers(customers, customerRemaining = new Map()) {
   for (const customer of customers) {
     if (!customer.visible) continue;
-    _drawOneCustomer(customer);
+    _drawOneCustomer(customer, customerRemaining.get(customer));
   }
 }
 
-function _drawOneCustomer(customer) {
+function _drawOneCustomer(customer, remaining) {
   const px = customer.px;
   const py = customer.py;
 
@@ -417,15 +417,17 @@ function _drawOneCustomer(customer) {
   ctx.stroke();
 
   if (customer.state === 'WAITING' && customer.currentOrder) {
-    const name = customer.currentOrder.customerName.split(' ').pop();
+    const lastName = customer.currentOrder.customerName.split(' ').pop();
+    const canCount = remaining ?? customer.currentOrder.canCount;
+    const label    = `${lastName} ×${canCount}`;
     ctx.font = `${Math.round(9 * S)}px Courier New`;
-    const tw = ctx.measureText(name).width + 6 * S;
+    const tw = ctx.measureText(label).width + 6 * S;
     ctx.fillStyle = 'rgba(10,10,20,0.75)';
     ctx.fillRect(px - tw / 2, py - 34 * S, tw, 13 * S);
     ctx.fillStyle = '#ffe';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillText(name, px, py - 32 * S);
+    ctx.fillText(label, px, py - 32 * S);
   }
 }
 
@@ -434,6 +436,8 @@ function _drawOneCustomer(customer) {
 export function drawPlayer(player, bodyColor = '#3399ee') {
   const px = player.px;
   const py = player.py;
+
+  ctx.save();
 
   ctx.fillStyle = bodyColor;
   ctx.fillRect(px - 10 * S, py - 14 * S, 20 * S, 24 * S);
@@ -461,6 +465,8 @@ export function drawPlayer(player, bodyColor = '#3399ee') {
     ctx.strokeStyle = 'rgba(0,0,0,0.35)';
     ctx.strokeRect(bx, by, 10 * S, 6 * S);
   });
+
+  ctx.restore();
 }
 
 // ── Util ──────────────────────────────────────────────────────────────────

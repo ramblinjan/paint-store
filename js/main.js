@@ -42,10 +42,16 @@ function gameLoop(timestamp) {
   sm.update(dt, player);
   for (const c of sm.allCustomers) c.update(dt);
 
+  // Build remaining-cans map for customer sprite labels
+  const customerRemaining = new Map();
+  for (const t of sm.tickets.values()) {
+    customerRemaining.set(t.customer, t.cansNeeded - t.cansDelivered);
+  }
+
   // Render
   clear();
   drawTiles(sm.flashZones, sm.shakers, sm.tintMachine, elapsed);
-  drawCustomers(sm.allCustomers);
+  drawCustomers(sm.allCustomers, customerRemaining);
   drawPlayer(player);
   if (player2) drawPlayer(player2, '#ee8822');
 
