@@ -3,11 +3,13 @@ import { TILE, COLS, DAY_DURATION } from './constants.js';
 const el = id => document.getElementById(id);
 const CONTAINER = COLS * TILE; // canvas width in px
 
-export function updateHUD(sm, player) {
+export function updateHUD(sm, player, player2 = null) {
   el('score').textContent = sm.score;
   _updateDayBanner(sm);
-  _updateQueuePanel(sm, player);
-  _updateRightPanel(sm, player);
+  _updateQueuePanel(sm);
+  _updateWorkingBlock(sm, player,  'active-task',    'P1');
+  _updateWorkingBlock(sm, player2, 'active-task-p2', 'P2');
+  _updateRightPanel(sm);
 }
 
 function _updateDayBanner(sm) {
@@ -16,38 +18,36 @@ function _updateDayBanner(sm) {
   if (sun) sun.style.left = `calc(${progress * 100}% - 7px)`;
 }
 
-function _updateQueuePanel(sm, player) {
-  // Queue list
+function _updateQueuePanel(sm) {
   const list = el('queue-list');
   list.innerHTML = '';
   sm.queueTickets.forEach(t => {
     const div = document.createElement('div');
     div.className = 'queue-item';
-    const canLabel = t.order.canCount > 1 ? ` ×${t.order.canCount}` : '';
     div.innerHTML =
-      `<span class="qi-name">${t.order.customerName.split(' ').pop()}${canLabel}</span>` +
+      `<span class="qi-name">${t.order.customerName.split(' ').pop()} ×${t.order.canCount}</span>` +
       `<span class="qi-color">${t.order.colorName}</span>`;
     list.appendChild(div);
   });
   if (sm.queue.length === 0) {
     list.innerHTML = '<div class="queue-empty">No customers</div>';
   }
+}
 
-  // Active tasks across all carry arrays
-  const taskEl = el('active-task');
+function _updateWorkingBlock(sm, player, elementId, label) {
+  const taskEl = el(elementId);
+  if (!player) { taskEl.classList.add('hidden'); return; }
+
   const allActive = [
     ...(player.cans       || []).map(e => ({ ticketId: e.ticketId, baseType: e.baseType, stage: 'base' })),
     ...(player.sealedCans || []).map(e => ({ ticketId: e.ticketId, stage: 'sealed' })),
     ...(player.mixedCans  || []).map(e => ({ ticketId: e.ticketId, stage: 'deliver' })),
   ];
 
-  if (allActive.length === 0) {
-    taskEl.classList.add('hidden');
-    return;
-  }
+  if (allActive.length === 0) { taskEl.classList.add('hidden'); return; }
 
   taskEl.classList.remove('hidden');
-  taskEl.innerHTML = '<div class="task-label">WORKING</div>';
+  taskEl.innerHTML = `<div class="task-label">${label}</div>`;
   for (const item of allActive) {
     const ticket = sm.tickets.get(item.ticketId);
     if (!ticket) continue;
@@ -67,7 +67,7 @@ function _updateQueuePanel(sm, player) {
   }
 }
 
-function _updateRightPanel(sm, player) {
+function _updateRightPanel(sm) {
   // Tinter status
   const tinterEl = el('tinter-status');
   if (tinterEl) {
@@ -116,17 +116,15 @@ function _updateRightPanel(sm, player) {
     shakerList.appendChild(div);
   });
 
-  // Pickup queue — show can progress for multi-can orders
+  // Pickup queue — show remaining gallons, counting down
   const pickupList = el('pickup-list');
   pickupList.innerHTML = '';
   sm.pickupTickets.forEach(t => {
     const div = document.createElement('div');
     div.className = 'pickup-item';
-    const name = t.order.customerName.split(' ').pop();
-    const progress = t.cansNeeded > 1
-      ? ` — ${t.cansDelivered}/${t.cansNeeded}`
-      : '';
-    div.textContent = name + progress;
+    const name      = t.order.customerName.split(' ').pop();
+    const remaining = t.cansNeeded - t.cansDelivered;
+    div.textContent = `${name} ×${remaining}`;
     pickupList.appendChild(div);
   });
   if (sm.atPickup.length === 0) {

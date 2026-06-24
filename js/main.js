@@ -50,7 +50,7 @@ function gameLoop(timestamp) {
   if (player2) drawPlayer(player2, '#ee8822');
 
   // HUD
-  updateHUD(sm, player);
+  updateHUD(sm, player, player2);
   updateSpeechBubbles(sm.allCustomers);
 
   // Day end
