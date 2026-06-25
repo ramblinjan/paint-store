@@ -4,7 +4,7 @@ import { generateOrder } from './order.js';
 import { Customer } from './customer.js';
 import { OrderTicket, TICKET_STATUS } from './ticket.js';
 import { showPrompt, showCelebration } from './hud.js';
-import { pickPersona, generateLine } from './dialogue.js';
+import { pickCustomer } from './dialogue.js';
 
 const MAX_QUEUE      = 6;
 const MAX_CARRY      = 3;
@@ -136,7 +136,7 @@ export class StoreManager {
 
     this.queue.forEach((id, i) => this.tickets.get(id).customer.advanceQueue(i));
 
-    this._requestLine(ticket, 'ORDER');
+    this._requestLine(ticket);
   }
 
   _grabBase(player, grabbed, zone) {
@@ -226,7 +226,7 @@ export class StoreManager {
       this._freePickupSlots.sort();
 
       ticket.status = TICKET_STATUS.DONE;
-      this._requestLine(ticket, 'PICKUP');
+      this._requestLine(ticket);
       ticket.customer.leave();
 
       showCelebration(true);
@@ -253,10 +253,10 @@ export class StoreManager {
     const ticket   = new OrderTicket(id, customer, order);
     ticket.queueSlot = slot;
 
-    customer.arrive(order, pickPersona(), slot);
+    customer.arrive(order, pickCustomer(), slot);
     this.tickets.set(id, ticket);
     this.queue.push(id);
-    this._requestLine(ticket, 'WAIT');
+    this._requestLine(ticket);
   }
 
   // ── Private: shakers ─────────────────────────────────────────────────────
@@ -380,10 +380,10 @@ export class StoreManager {
 
   // ── Private: dialogue ────────────────────────────────────────────────────
 
-  _requestLine(ticket, phase) {
+  _requestLine(ticket) {
     const c = ticket.customer;
-    if (!c.persona || !ticket.order) return;
-    c.speech = { text: generateLine(c.persona, phase, ticket.order), state: 'shown' };
+    if (!c.lines?.length || !ticket.order) return;
+    c.speech = { state: 'shown' };
   }
 
   // ── Private: flashes ─────────────────────────────────────────────────────

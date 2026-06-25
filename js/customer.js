@@ -7,8 +7,8 @@ export const QUEUE_POSITIONS = [
   { x: 4, y: 14 }, { x: 6, y: 14 }, { x: 8, y: 14 },  // back row
 ];
 export const PICKUP_POSITIONS = [
-  { x: 15, y: 13 }, { x: 14, y: 13 }, { x: 16, y: 13 },
-  { x: 15, y: 14 }, { x: 14, y: 14 }, { x: 16, y: 14 },
+  { x: 12, y: 13 }, { x: 14, y: 13 }, { x: 16, y: 13 },
+  { x: 12, y: 14 }, { x: 14, y: 14 }, { x: 16, y: 14 },
 ];
 const EXIT_TILE  = { x: 21.5, y: 13 };
 
@@ -18,19 +18,19 @@ export class Customer {
     this.y = 16;
     this.state = 'OFFSCREEN'; // OFFSCREEN | WALKING_IN | WAITING | WALKING_OUT | GONE
     this.currentOrder = null;
-    this.persona = null;
-    this.speech = { text: '', state: 'hidden' }; // hidden | loading | shown
-    this.reqId = 0; // bumped each arrival; guards stale async dialogue
+    this.lines = []; // 3 sequential lines: [intro, funny, impatient]
+    this.speech = { state: 'hidden' }; // hidden | shown
+    this.reqId = 0; // bumped each arrival; guards stale dialogue
     this._targetX = 0;
     this._targetY = 16;
   }
 
   // Spawn off-screen below the queue slot and walk up to it.
-  arrive(order, persona, queueSlot) {
+  arrive(order, character, queueSlot) {
     this.currentOrder = order;
-    this.persona = persona;
+    this.lines = character?.lines ?? [];
     this.reqId++;
-    this.speech = { text: '', state: 'hidden' };
+    this.speech = { state: 'hidden' };
     const pos = QUEUE_POSITIONS[queueSlot];
     this.x = pos.x;
     this.y = 15.5;

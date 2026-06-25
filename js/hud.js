@@ -5,10 +5,11 @@ const CONTAINER = COLS * TILE; // canvas width in px
 
 // Two independent speech bubble groups: queue (register line) and pickup
 const _bubbleState = {
-  queue:  { target: null, timer: 0, duration: 12 },
-  pickup: { target: null, timer: 0, duration: 12 },
+  queue:  { target: null, timer: 0, duration: 12, currentText: '' },
+  pickup: { target: null, timer: 0, duration: 12, currentText: '' },
 };
-const _spokenMap = new Map(); // customer → reqId when they were last shown
+// customer → { reqId, lineIndex } — tracks how many lines shown this visit (max 3)
+const _spokenMap = new Map();
 
 export function updateHUD(sm, player, player2 = null) {
   el('score').textContent = sm.score;
@@ -222,7 +223,6 @@ export function updateSpeechBubbles(queueCustomers, pickupCustomers, dt = 0) {
 function _tickBubble(bubble, textEl, customers, dt, key) {
   const state = _bubbleState[key];
 
-  // Check if current target is still showable
   const targetValid = state.target
     && state.target.visible
     && state.target.speech?.state === 'shown'
@@ -232,18 +232,26 @@ function _tickBubble(bubble, textEl, customers, dt, key) {
     state.target = null;
     state.timer  = 0;
 
-    // Find first unspoken candidate
-    const candidate = customers.find(c =>
-      c?.visible &&
-      c.speech?.state === 'shown' &&
-      _spokenMap.get(c) !== c.reqId
-    );
+    // Find a customer who still has unshown lines this visit
+    const candidate = customers.find(c => {
+      if (!c?.visible || c.speech?.state !== 'shown') return false;
+      const entry = _spokenMap.get(c);
+      if (!entry || entry.reqId !== c.reqId) return true;
+      return entry.lineIndex < 3;
+    });
 
     if (candidate) {
-      state.target   = candidate;
-      state.duration = 10 + Math.random() * 5;
-      state.timer    = state.duration;
-      _spokenMap.set(candidate, candidate.reqId); // mark as spoken
+      const entry     = _spokenMap.get(candidate);
+      const lineIndex = (!entry || entry.reqId !== candidate.reqId) ? 0 : entry.lineIndex;
+      const rawLine   = candidate.lines?.[lineIndex] ?? '';
+      const color     = candidate.currentOrder?.colorName ?? '';
+
+      state.target      = candidate;
+      state.duration    = 10 + Math.random() * 5;
+      state.timer       = state.duration;
+      state.currentText = rawLine.replace('{color}', color);
+
+      _spokenMap.set(candidate, { reqId: candidate.reqId, lineIndex: lineIndex + 1 });
     }
   }
 
@@ -261,7 +269,6 @@ function _tickBubble(bubble, textEl, customers, dt, key) {
     return;
   }
 
-  // Fade out over the last 40% of display time
   const fadeStart = state.duration * 0.6;
   const opacity   = state.timer > fadeStart
     ? 1.0
@@ -269,7 +276,7 @@ function _tickBubble(bubble, textEl, customers, dt, key) {
   bubble.style.opacity = opacity.toFixed(3);
 
   bubble.classList.remove('hidden');
-  textEl.textContent = state.target.speech.text;
+  textEl.textContent = state.currentText;
 
   const w    = bubble.offsetWidth;
   const h    = bubble.offsetHeight;
