@@ -22,7 +22,7 @@ export function createInputHandler(
     keys[e.key] = true;
     if (interactKeys.includes(e.key)) {
       interactPressed = true;
-      e.stopPropagation();
+      e.preventDefault();
     }
   });
 
