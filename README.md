@@ -2,7 +2,7 @@
 
 A browser-based paint store management game. Mix custom paint orders, run the tinting machine, and get cans to customers before they lose patience.
 
-**[Play it here](https://ramblinjan.github.io/paint-store/)**
+**[Play it here](https://ramblinjan.github.io/sherman-willard/)**
 
 ## How it works
 
